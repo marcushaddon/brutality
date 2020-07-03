@@ -1,0 +1,140 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <title>The HTML5 Herald</title>
+    <meta name="description" content="The HTML5 Herald">
+    <meta name="author" content="SitePoint">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        #app {
+            padding: 20px 10px;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .evidence {
+            margin: 34px 0px;
+        }
+
+        .description {
+            margin-bottom: 28px;
+        }
+
+        .watch {
+            color: white;
+            background-color: red;
+            width: 100%;
+            height: 64px;
+            padding: 12px;
+            margin: 24px;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .streams {
+            margin: 24px 0px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id='app'>
+        <h3>Loading...</h3>
+    </div>
+
+
+    <script>
+        const renderReport = report => {
+            return `
+                <h1>${report.title}</h1>
+                <h3>${report.city}, ${report.state} ${report.date ? '- ' + new Date(report.date).toLocaleDateString() : ''}</h3>
+                <hr>
+                <h2>Evidence</h2>
+                ${Array.isArray(report.evidence) && report.evidence.map((item, i) => renderEvidence(item, i)).join('')}
+                <div class="footer">
+                    This info was pulled from <a href="https://github.com/2020PB/police-brutality">PB2020</a>
+                </div>
+            `
+        };
+
+        const renderEvidence = (evidence, num) => {
+            return `
+            <div class="evidence ${num % 2 === 0 ? 'even': 'odd'}">
+                ${
+                    evidence.video.map(vid => {
+                        let out = `${typeof vid.thumbnail === 'string' && `<div class="thumnail-wrapper">
+                                    <img src="${vid.thumbnail}" class="thumbnail" />
+                                </div>` || 'No thumbnail'}
+                                <p class="description">
+                                    ${vid.title || vid.description || 'No description'}
+                                </p>
+                                <a href="${vid.url}"><span class="watch">Watch ${ vid.duration && '(' + fmtTime(vid.duration) + ')' || ''}</span></a>
+                        `
+                        if (Array.isArray(vid.streams)) {
+                            out += `
+                                <div class="streams">
+                                    <strong>Additional streams:</strong>
+                                    <ol>
+                                        ${vid.streams.map(stream => {
+                                            return `<li><a href="${stream.url}">${stream.format}</a></li>`
+                                        })}
+                                    </ol>
+                                </div>
+                            `;
+                        }
+                        return out;
+
+                    })
+                }
+            </div>
+            `
+        };
+
+        const displayError = msg => document.getElementById('app').innerHTML = `<div class="error">${msg}</div>`;
+
+        const fmtTitle = title => title.length < 50 ? title : title.slice(0, 50) + '...';
+        const fmtTime = timeStr => {
+            const [ whole, partial ] = timeStr.split('.').map(p => parseInt(p));
+
+            return `${whole}:${Math.floor(60 * partial * 0.01)}`;
+        }
+        
+        const main = async () => {
+            const url = `https://api.846policebrutality.com/api/incidents/`;
+            const urlParams = new URLSearchParams(window.location.search);
+            const reportId = urlParams.get('reportId');
+            if (typeof reportId !== 'string') {
+                displayError('Invalid report id');
+                
+                return;
+            }
+
+            let res;
+            try {
+                res = await fetch(url + reportId + '?include=evidence')
+                const parsed = await res.json();
+                if (parsed.data.length === 0) {
+                    displayError('Report not found');
+                    
+                    return;
+                }
+                
+                const rendered = renderReport(parsed.data[0]);
+                document.getElementById('app').innerHTML = rendered;
+            } catch (e) {
+                displayError(e.message);
+            }
+        };
+
+        main();
+        
+    </script>
+</body>
+</html>
