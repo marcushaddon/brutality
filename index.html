@@ -84,7 +84,7 @@
                                     <ol>
                                         ${vid.streams.map(stream => {
                                             return `<li><a href="${stream.url}">${stream.format}</a></li>`
-                                        })}
+                                        }).join('')}
                                     </ol>
                                 </div>
                             `;
